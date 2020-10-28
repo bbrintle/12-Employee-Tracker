@@ -10,6 +10,13 @@ var connection = mysql.createConnection({
     database: "employee_db",
 });
 
+function convertFirstLetterCap(word){
+    const answer1 = word[0].toUpperCase();
+    let answer2 = word.toLowerCase();
+    answer2 = answer2.substring(1);
+    return answer1 + answer2;
+}
+
 function askForAddDepartment(){
     inquirer.prompt([
         {
@@ -18,10 +25,7 @@ function askForAddDepartment(){
             name: "department"
         }
     ]).then(response => {
-        const answer1 = response.department[0].toUpperCase();
-        let answer2 = response.department.toLowerCase();
-        answer2 = answer2.substring(1);
-        const answer = answer1 + answer2;
+        const answer = convertFirstLetterCap(response.department);
 
         connection.query("SELECT * FROM department", function (err, res){
             if(err) throw err;
@@ -75,6 +79,41 @@ function askForRemoveDepartments(){
     });
 }
 
+function askForUpdateDeparment(){
+    connection.query("SELECT * FROM department", function (err, res){
+        if(err) throw err;
+        res.forEach(result => currentDepartments.push(result.name))
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "What department would you like to update?",
+                choices: [...currentDepartments],
+                name: "pickedDeparment"
+            },
+            {
+                type: "input",
+                message: "What would you like to update the department's name to?",
+                name: "updatedDepartment"
+            }
+        ]).then(response => {
+            const { pickedDeparment } = response;
+            const updatedDepartment = convertFirstLetterCap(response.updatedDepartment);
+
+            currentRole.forEach(role => {
+                if(role === pickedDeparment){
+                    connection.query("UPDATE role SET ? WHERE ?", [
+                        { name: updatedDepartment }, 
+                        { name: pickedDeparment }
+                    ], function(err, res){
+                        console.log(`\nUpdated ${pickedDeparment} to department: ${updatedDepartment}\n`);
+                        displayMainMenu();
+                    });
+                };
+            });
+        });
+    });
+}
+
 function askForAddRole(){
     connection.query("SELECT * FROM department", function (err, res){
         if(err) throw err;
@@ -99,12 +138,8 @@ function askForAddRole(){
             }
         ]).then(response => {
     
-            const { department } = response;
-            const { salary } = response;
-            const answer1 = response.role[0].toUpperCase();
-            let answer2 = response.role.toLowerCase();
-            answer2 = answer2.substring(1);
-            const role = answer1 + answer2;
+            const { department, salary } = response;
+            const role = convertFirstLetterCap(response.role);
             let departmentID;
 
             for (let i = 0; i < res.length; i++){
@@ -140,7 +175,6 @@ function askForRemoveRole(){
             const { role } = response;
             connection.query("DELETE FROM role WHERE title=?", [ role ], function(err, res){
                 if (err) throw err;
-                console.log(res)
                 console.log(`\nRemoved ${role}\n`);
                 currentRole = [];
                 displayMainMenu();
@@ -166,16 +200,236 @@ function askForUpdateRoleName(){
                 name: "updatedRole"
             }
         ]).then(response => {
-            const { pickedRole, updatedRole } = response;
+            const { pickedRole } = response;
+            const updatedRole = convertFirstLetterCap(response.updatedRole);
+
             currentRole.forEach(role => {
                 if(role === pickedRole){
-                    connection.query("UPDATE role SET ? WHERE ?", [{title: updatedRole}, {title: pickedRole}], function(err, res){
+                    connection.query("UPDATE role SET ? WHERE ?", [
+                        { title: updatedRole }, 
+                        { title: pickedRole }
+                    ], function(err, res){
+                        console.log(`\nUpdated ${pickedRole} to ${updatedRole}\n`);
                         displayMainMenu();
                     });
                 };
             });
         });
     });
+}
+
+function askForUpdateRoleSalary(){
+    connection.query("SELECT * FROM role", function (err, res){
+        if(err) throw err;
+        res.forEach(result => currentRole.push(result.title))
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "What role would you like to update?",
+                choices: [...currentRole],
+                name: "pickedRole"
+            },
+            {
+                type: "number",
+                message: "What would you like to update the role's salary to?",
+                name: "updatedSalary"
+            }
+        ]).then(response => {
+            const { pickedRole, updatedSalary } = response;
+
+            currentRole.forEach(role => {
+                if(role === pickedRole){
+                    connection.query("UPDATE role SET ? WHERE ?", [
+                        { salary: updatedSalary }, 
+                        { title: pickedRole }
+                    ], function(err, res){
+                        console.log(`\nUpdated ${pickedRole} to ${updatedSalary}\n`);
+                        displayMainMenu();
+                    });
+                };
+            });
+        });
+    });
+}
+
+function askForUpdateRoleDepartment(){
+    connection.query("SELECT * FROM role", function (err, res){
+        if(err) throw err;
+        res.forEach(result => currentRole.push(result.title))
+        connection.query("SELECT * FROM department", function (err, res){
+            if(err) throw err;
+            res.forEach(result => currentDepartments.push(result.name))
+            inquirer.prompt([
+                {
+                    type: "list",
+                    message: "What role would you like to update?",
+                    choices: [...currentRole],
+                    name: "pickedRole"
+                },
+                {
+                    type: "list",
+                    message: "Which department does this role belong to?",
+                    choices: [...currentDepartments],
+                    name: "updatedDepartment"
+                }
+            ]).then(response => {
+                const { pickedRole, updatedDepartment } = response;
+                let departmentID;
+                for (let i = 0; i < res.length; i++){
+                    if(updatedDepartment === res[i].name){ departmentID = res[i].id };
+                }
+                currentRole.forEach(role => {
+                    if(role === pickedRole){
+                        connection.query("UPDATE role SET ? WHERE ?", [
+                            { department_id: departmentID }, 
+                            { title: pickedRole }
+                        ], function(err, res){
+                            console.log(`\nUpdated ${pickedRole} to deparment: ${updatedDepartment}\n`);
+                            displayMainMenu();
+                        });
+                    };
+                });
+            });
+        });
+    });
+}
+
+function viewAllEmployees(){
+    const employeeTable = [];
+    connection.query("SELECT * FROM department", function(err, res){
+        if(err) throw err
+        res.forEach(department => currentDepartments.push(department));
+
+        connection.query("SELECT * FROM employee", function (err, res){
+            if(err) throw err
+            res.forEach(employee => employeeTable.push(employee))
+            connection.query("SELECT * FROM role", function(err, res){
+                if(err) throw err
+                for(let j = 0; j < employeeTable.length; j++){
+                    for(let i = 0; i < res.length; i++){
+                        if(res[i].id === employeeTable[j].role_id){
+                            employeeTable[j].role_id = res[i].title;
+                            for(let h = 0; h < currentDepartments.length; h++){
+                                if(currentDepartments[h].id === res[i].department_id){
+                                    employeeTable[j].department_id = currentDepartments[h].name
+                                }
+                            }
+                            employeeTable[j].salary = res[i].salary;
+                        }
+                    }
+                }
+                console.log("\n");
+                console.table(employeeTable);
+                console.log("\n");
+                displayMainMenu();
+            })
+        });
+    });
+}
+
+function viewAllEmployeesByDep(){
+    const employeeTable = [];
+    connection.query("SELECT * FROM department", function(err, res){
+        if(err) throw err
+        res.forEach(department => currentDepartments.push(department));
+
+        connection.query("SELECT * FROM employee", function (err, res){
+            if(err) throw err
+            res.forEach(employee => employeeTable.push(employee))
+            connection.query("SELECT * FROM role", function(err, res){
+                if(err) throw err
+                for(let j = 0; j < employeeTable.length; j++){
+                    for(let i = 0; i < res.length; i++){
+                        if(res[i].id === employeeTable[j].role_id){
+                            employeeTable[j].role_id = res[i].title;
+                            for(let h = 0; h < currentDepartments.length; h++){
+                                if(currentDepartments[h].id === res[i].department_id){
+                                    employeeTable[j].department_id = currentDepartments[h].name
+                                }
+                            }
+                            employeeTable[j].salary = res[i].salary;
+                        }
+                    }
+                }
+
+                inquirer.prompt([
+                    {
+                        type: "list",
+                        message: "What department would you like to filter by?",
+                        choices: [...currentDepartments],
+                        name: "usersAnwer"
+                    },
+                ]).then(response => {
+                    const { usersAnwer } = response;
+                    const newEmployeeTable = []
+                    employeeTable.forEach(department => {
+                        if(department.department_id === usersAnwer) {
+                            newEmployeeTable.push(department)
+                        }
+                    })
+                    console.log("\n");
+                    console.table(newEmployeeTable);
+                    console.log("\n");
+                    displayMainMenu();
+                })
+            })
+        });
+    });
+}
+
+function askForAddEmployee(){
+
+    connection.query("SELECT * FROM role", function (err, res){
+        if(err) throw err;
+        res.forEach(result => currentRole.push(result))
+        let roleList = currentRole.map(role => role.title)
+        //connection.query("SELECT * FROM manager", function (err, res){
+            inquirer.prompt([
+                {
+                    type: "input",
+                    message: "What is the employee's first name?",
+                    name: "firstName"
+                },
+                {
+                    type: "input",
+                    message: "What is the employee's last name?",
+                    name: "lastName"
+                },
+                {
+                    type: "list",
+                    message: "Which role will this user be assigned to?",
+                    choices: [...roleList],
+                    name: "assignedRole"
+                }
+                // ,{
+                //     type: "list",
+                //     message: "Which role will this user be assigned to?",
+                //     choices: [...currentRole],
+                //     name: "assginedManager"
+                // }
+            ]).then(response => {
+                const firstName = convertFirstLetterCap(response.firstName);
+                const lastName = convertFirstLetterCap(response.lastName);
+                const { assignedRole } = response;
+                let roleID = null;
+                currentRole.forEach(result => {
+                    if(assignedRole === result.title){
+                        return roleID = result.id;
+                    };
+                });
+                
+                connection.query("INSERT INTO employee SET ?",[{
+                    first_name: firstName,
+                    last_name: lastName,
+                    role_id: roleID,
+                    manager_id: null
+                }], function(err, res){
+                    if(err) throw err
+                    console.log(`\nAdd ${firstName} ${lastName} to the employee list.\n`);
+                    displayMainMenu();
+                });
+            });
+});
 }
 
 function displayMainMenu(){
@@ -195,7 +449,8 @@ function displayMainMenu(){
     "Add Department",
     "Remove Department",
     "Update Department",
-    "View Utilized Budget by Department"]
+    "View Utilized Budget by Department",
+    "Quit"]
     
     inquirer.prompt([
         {
@@ -208,13 +463,13 @@ function displayMainMenu(){
         const { choice } = response;
         switch(choice){
             case "View all Employees":
-                return
+                return viewAllEmployees();
             case "View all Employees by Department":
-                return
+                return viewAllEmployeesByDep();
             case "View all Employees by Manager":
-                return
+                return viewAllEmployeesByMan();
             case "Add Employee":
-                return
+                return askForAddEmployee();
             case "Remove Employee":
                 return
             case "Update Employee":
@@ -230,17 +485,19 @@ function displayMainMenu(){
             case "Update Role's Name":
                 return askForUpdateRoleName();
             case "Update Role's Salary":
-                return
+                return askForUpdateRoleSalary();
             case "Update Role's Department":
-                return
+                return askForUpdateRoleDepartment();
             case "Add Department":
                 return askForAddDepartment();
             case "Remove Department":
                 return askForRemoveDepartments();
             case "Update Department":
-                return
+                return askForUpdateDeparment();
             case "View Utilized Budget by Department":
                 return
+            case "Quit":
+                connection.end();
         }
     });
 }

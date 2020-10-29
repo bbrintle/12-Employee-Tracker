@@ -43,7 +43,6 @@ function viewAllEmployees(){
                                         employeeTable[j].department_id = currentDepartments[h].name
                                     }
                                 }
-
                                 for(let k = 0; k < managerTable.length; k++){
                                     if(managerTable[k].id === employeeTable[j].manager_id){
                                         employeeTable[j].manager_id = managerTable[k].first_name + " " + managerTable[k].last_name;
@@ -70,7 +69,6 @@ function viewAllEmployeesByDep(){
     connection.query("SELECT * FROM department", function(err, res){
         if(err) throw err
         res.forEach(department => currentDepartments.push(department));
-
         connection.query("SELECT * FROM employee", function (err, res){
             if(err) throw err
             res.forEach(employee => employeeTable.push(employee))
@@ -88,7 +86,6 @@ function viewAllEmployeesByDep(){
                                         employeeTable[j].department_id = currentDepartments[h].name
                                     }
                                 }
-
                                 for(let k = 0; k < managerTable.length; k++){
                                     if(managerTable[k].id === employeeTable[j].manager_id){
                                         employeeTable[j].manager_id = managerTable[k].first_name + " " + managerTable[k].last_name;
@@ -98,7 +95,6 @@ function viewAllEmployeesByDep(){
                             }
                         }
                     }
-
                     inquirer.prompt([
                         {
                             type: "list",
@@ -132,7 +128,6 @@ function viewAllEmployeesByMan(){
     connection.query("SELECT * FROM department", function(err, res){
         if(err) throw err
         res.forEach(department => currentDepartments.push(department));
-
         connection.query("SELECT * FROM employee", function (err, res){
             if(err) throw err
             res.forEach(employee => employeeTable.push(employee))
@@ -151,7 +146,6 @@ function viewAllEmployeesByMan(){
                                         employeeTable[j].department_id = currentDepartments[h].name
                                     }
                                 }
-
                                 for(let k = 0; k < managerTable.length; k++){
                                     if(managerTable[k].id === employeeTable[j].manager_id){
                                         employeeTable[j].manager_id = managerTable[k].first_name + " " + managerTable[k].last_name;
@@ -161,7 +155,6 @@ function viewAllEmployeesByMan(){
                             }
                         }
                     }
-
                     inquirer.prompt([
                         {
                             type: "list",
@@ -199,7 +192,6 @@ function askForAddEmployee(){
             res.forEach(result => currentManagers.push(result))
             const managerTable = [];
             res.forEach(result => managerTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
-
             inquirer.prompt([
                 {
                     type: "input",
@@ -235,7 +227,6 @@ function askForAddEmployee(){
                         return managerID = result.id;
                     };
                 });
-                
                 connection.query("INSERT INTO employee SET ?",[{
                     first_name: firstName,
                     last_name: lastName,
@@ -258,7 +249,6 @@ function askForRemoveEmployee(){
         const employeeTable = [];
         res.forEach(result => employeeTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
         let employeeList = employeeTable.map(employee => employee.name)
-
         inquirer.prompt([
             {
                 type:"list",
@@ -274,7 +264,6 @@ function askForRemoveEmployee(){
                         if(err) throw err;
                         console.log(`\nRemoved ${employeeTable[i].name} from the employee list.\n`);
                     });
-
                     connection.query("DELETE FROM managers WHERE first_name=? AND last_name=?", [res.first_name, res.last_name], function (err, res){
                         if(err) throw err;
                     })
@@ -292,7 +281,6 @@ function updateEmployeeName(){
         const employeeTable = [];
         res.forEach(result => employeeTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
         let employeeList = employeeTable.map(employee => employee.name)
-
         inquirer.prompt([
             {
                 type:"list",
@@ -339,7 +327,6 @@ function updateEmployeeRole(){
         const employeeTable = [];
         res.forEach(result => employeeTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
         let employeeList = employeeTable.map(employee => employee.name)
-
         connection.query("SELECT * FROM role", function (err, res){
             if(err) throw err;
             res.forEach(result => currentRole.push(result.title))
@@ -361,7 +348,6 @@ function updateEmployeeRole(){
                 res.forEach(result => {if(updatedRole == result.title){roleID = result.id}})
                 let manID = null;
                 for (let i = 0; i < employeeTable.length; i++){
-                    
                     if(updatedEmployee === employeeTable[i].name){
                         res.forEach(role => {
                             if(roleID === role.id){
@@ -375,54 +361,6 @@ function updateEmployeeRole(){
                         ], function (err, res){
                             if(err) throw err;
                             console.log(`\nUpdated ${employeeTable[i].name}'s role to ${updatedRole} \n`);
-                            clearArrays()
-                            displayMainMenu();
-                        });
-                    }
-                };
-            }); 
-        });
-    });
-}
-
-function updateEmployeeManager(){
-    connection.query("SELECT * FROM employee", function (err, res){
-        if(err) throw err;
-        const employeeTable = [];
-        res.forEach(result => employeeTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
-        let employeeList = employeeTable.map(employee => employee.name)
-
-        connection.query("SELECT * FROM managers", function (err, res){
-            if(err) throw err;
-            const managersTable = [];
-            res.forEach(result => managersTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
-            let managersList = managersTable.map(manager => manager.name)
-            inquirer.prompt([
-                {
-                    type:"list",
-                    message:"Select the employee you would like to update.",
-                    choices: [...employeeList],
-                    name: "updatedEmployee"
-                },
-                {
-                    type:"list",
-                    message:"Select the role you would like to update to.",
-                    choices: [...managersList],
-                    name: "updatedManager"
-                }
-            ]).then(response => {
-                const { updatedEmployee, updatedManager } = response;
-
-                managersTable.forEach(result => {if(updatedManager === result.name){managerID = result.id}})
-
-                for (let i = 0; i < employeeTable.length; i++){
-                    if(updatedEmployee === employeeTable[i].name){
-                        connection.query("UPDATE employee SET manager_id=? WHERE id=?",[
-                            managerID,
-                            employeeTable[i].id                        
-                        ], function (err, res){
-                            if(err) throw err;
-                            console.log(`\nUpdated ${updatedEmployee}'s manger to ${updatedManager} \n`);
                             clearArrays()
                             displayMainMenu();
                         });
@@ -542,7 +480,6 @@ function askForAddDepartment(){
         }
     ]).then(response => {
         const answer = convertFirstLetterCap(response.department);
-
         connection.query("SELECT * FROM department", function (err, res){
             if(err) throw err;
             currentDepartments = []
@@ -556,7 +493,6 @@ function askForAddDepartment(){
                     return displayMainMenu();
                 }
             });
-
             if (!foundDepartment){
                 connection.query("INSERT INTO department SET ?", {
                     name: answer
@@ -592,14 +528,12 @@ function askForRemoveDepartments(){
                     currentDepID = department.id;
                 }
             })
-
             connection.query("SELECT * FROM role WHERE department_id=?", [currentDepID] , function (err, res){
                 if(err) throw err;
                 if(res[0].department_id === currentDepID){
                     console.log("\nYou currently have a role assigned. \nRemove everything assigned to this department and then try again.\n")
                     clearArrays()
                     displayMainMenu();
-                    
                 }else{
                     connection.query("DELETE FROM department WHERE name=?", [ name ], function(){
                         if (err) throw err;
@@ -633,7 +567,6 @@ function askForUpdateDeparment(){
         ]).then(response => {
             const { pickedDeparment } = response;
             const updatedDepartment = convertFirstLetterCap(response.updatedDepartment);
-
             currentRole.forEach(role => {
                 if(role === pickedDeparment){
                     connection.query("UPDATE role SET ? WHERE ?", [
@@ -654,7 +587,6 @@ function askForAddRole(){
     connection.query("SELECT * FROM department", function (err, res){
         if(err) throw err;
         res.forEach(result => currentDepartments.push(result.name))
-
         inquirer.prompt([
             {
                 type: "input",
@@ -673,15 +605,12 @@ function askForAddRole(){
                 name: "department"
             }
         ]).then(response => {
-    
             const { department, salary } = response;
             const role = convertFirstLetterCap(response.role);
             let departmentID;
-
             for (let i = 0; i < res.length; i++){
                 if(department === res[i].name){ departmentID = res[i].id };
             }
-    
             connection.query("INSERT INTO role SET ?", {
                 title: role,
                 salary: salary,
@@ -700,7 +629,6 @@ function askForRemoveRole(){
     connection.query("SELECT * FROM role", function (err, res){
         if(err) throw err;
         res.forEach(result => currentRole.push(result.title))
-
         inquirer.prompt([
             {
                 type: "list",
@@ -716,7 +644,6 @@ function askForRemoveRole(){
                     currentRoleID = element.id;
                 }
             })
-
             connection.query("SELECT * FROM employee WHERE role_id=?", [currentRoleID] , function (err, res){
                 if(err) throw err;
                 let foundEmployee = false;
@@ -758,7 +685,6 @@ function askForUpdateRoleName(){
         ]).then(response => {
             const { pickedRole } = response;
             const updatedRole = convertFirstLetterCap(response.updatedRole);
-
             currentRole.forEach(role => {
                 if(role === pickedRole){
                     connection.query("UPDATE role SET ? WHERE ?", [
@@ -793,7 +719,6 @@ function askForUpdateRoleSalary(){
             }
         ]).then(response => {
             const { pickedRole, updatedSalary } = response;
-
             currentRole.forEach(role => {
                 if(role === pickedRole){
                     connection.query("UPDATE role SET ? WHERE ?", [
@@ -906,7 +831,6 @@ function displayMainMenu(){
     "Remove Employee",
     "Update Employee",
     "Update Employee's Role",
-    "Update Employee's Manager",
     "Add Manager",
     "Remove Manager",
     "Add Role",
@@ -944,8 +868,6 @@ function displayMainMenu(){
                 return updateEmployeeName();
             case "Update Employee's Role":
                 return updateEmployeeRole();
-            case "Update Employee's Manager":
-                return updateEmployeeManager();
             case "Add Manager":
                 return askForAddManager()
             case "Remove Manager":

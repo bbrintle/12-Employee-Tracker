@@ -357,6 +357,7 @@ function viewAllEmployees(){
 
 function viewAllEmployeesByDep(){
     const employeeTable = [];
+    const managerTable = [];
     connection.query("SELECT * FROM department", function(err, res){
         if(err) throw err
         res.forEach(department => currentDepartments.push(department));
@@ -364,43 +365,116 @@ function viewAllEmployeesByDep(){
         connection.query("SELECT * FROM employee", function (err, res){
             if(err) throw err
             res.forEach(employee => employeeTable.push(employee))
-            connection.query("SELECT * FROM role", function(err, res){
+            connection.query("SELECT * FROM managers", function(err, res){
                 if(err) throw err
-                for(let j = 0; j < employeeTable.length; j++){
-                    for(let i = 0; i < res.length; i++){
-                        if(res[i].id === employeeTable[j].role_id){
-                            employeeTable[j].role_id = res[i].title;
-                            for(let h = 0; h < currentDepartments.length; h++){
-                                if(currentDepartments[h].id === res[i].department_id){
-                                    employeeTable[j].department_id = currentDepartments[h].name
+                res.forEach(manager => managerTable.push(manager));
+                connection.query("SELECT * FROM role", function(err, res){
+                    if(err) throw err
+                    for(let j = 0; j < employeeTable.length; j++){
+                        for(let i = 0; i < res.length; i++){
+                            if(res[i].id === employeeTable[j].role_id){
+                                employeeTable[j].role_id = res[i].title;
+                                for(let h = 0; h < currentDepartments.length; h++){
+                                    if(currentDepartments[h].id === res[i].department_id){
+                                        employeeTable[j].department_id = currentDepartments[h].name
+                                    }
                                 }
+
+                                for(let k = 0; k < managerTable.length; k++){
+                                    if(managerTable[k].id === employeeTable[j].manager_id){
+                                        employeeTable[j].manager_id = managerTable[k].first_name + " " + managerTable[k].last_name;
+                                    }
+                                }
+                                employeeTable[j].salary = res[i].salary;
                             }
-                            employeeTable[j].salary = res[i].salary;
                         }
                     }
-                }
 
-                inquirer.prompt([
-                    {
-                        type: "list",
-                        message: "What department would you like to filter by?",
-                        choices: [...currentDepartments],
-                        name: "usersAnwer"
-                    },
-                ]).then(response => {
-                    const { usersAnwer } = response;
-                    const newEmployeeTable = []
-                    employeeTable.forEach(department => {
-                        if(department.department_id === usersAnwer) {
-                            newEmployeeTable.push(department)
-                        }
+                    inquirer.prompt([
+                        {
+                            type: "list",
+                            message: "What department would you like to filter by?",
+                            choices: [...currentDepartments],
+                            name: "usersAnwer"
+                        },
+                    ]).then(response => {
+                        const { usersAnwer } = response;
+                        const newEmployeeTable = []
+                        employeeTable.forEach(department => {
+                            if(department.department_id === usersAnwer) {
+                                newEmployeeTable.push(department)
+                            }
+                        })
+                        console.log("\n");
+                        console.table(newEmployeeTable);
+                        console.log("\n");
+                        clearArrays()
+                        displayMainMenu();
                     })
-                    console.log("\n");
-                    console.table(newEmployeeTable);
-                    console.log("\n");
-                    clearArrays()
-                    displayMainMenu();
-                })
+                });
+            })
+        });
+    });
+}
+
+function viewAllEmployeesByMan(){
+    const employeeTable = [];
+    const managerTable = [];
+    connection.query("SELECT * FROM department", function(err, res){
+        if(err) throw err
+        res.forEach(department => currentDepartments.push(department));
+
+        connection.query("SELECT * FROM employee", function (err, res){
+            if(err) throw err
+            res.forEach(employee => employeeTable.push(employee))
+            connection.query("SELECT * FROM managers", function(err, res){
+                if(err) throw err
+                res.forEach(manager => managerTable.push(manager));
+                let managerList = managerTable.map(manager => manager.first_name + " " + manager.last_name)
+                connection.query("SELECT * FROM role", function(err, res){
+                    if(err) throw err
+                    for(let j = 0; j < employeeTable.length; j++){
+                        for(let i = 0; i < res.length; i++){
+                            if(res[i].id === employeeTable[j].role_id){
+                                employeeTable[j].role_id = res[i].title;
+                                for(let h = 0; h < currentDepartments.length; h++){
+                                    if(currentDepartments[h].id === res[i].department_id){
+                                        employeeTable[j].department_id = currentDepartments[h].name
+                                    }
+                                }
+
+                                for(let k = 0; k < managerTable.length; k++){
+                                    if(managerTable[k].id === employeeTable[j].manager_id){
+                                        employeeTable[j].manager_id = managerTable[k].first_name + " " + managerTable[k].last_name;
+                                    }
+                                }
+                                employeeTable[j].salary = res[i].salary;
+                            }
+                        }
+                    }
+
+                    inquirer.prompt([
+                        {
+                            type: "list",
+                            message: "What manager would you like to filter by?",
+                            choices: [...managerList],
+                            name: "usersAnwer"
+                        },
+                    ]).then(response => {
+                        const { usersAnwer } = response;
+                        const newEmployeeTable = []
+                        employeeTable.forEach(employee => {
+                            if(employee.manager_id === usersAnwer) {
+                                newEmployeeTable.push(employee)
+                            }
+                        })
+                        console.log("\n");
+                        console.table(newEmployeeTable);
+                        console.log("\n");
+                        clearArrays()
+                        displayMainMenu();
+                    })
+                });
             })
         });
     });
@@ -415,9 +489,8 @@ function askForAddEmployee(){
             if(err) throw err;
             res.forEach(result => currentManagers.push(result))
             const managerTable = [];
-            const managerList = [];
             res.forEach(result => managerTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
-            managerTable.forEach(employee => managerList.push(employee.name))
+            let managerList = managerTable.map(employee => employee.name)
 
             inquirer.prompt([
                 {
@@ -481,9 +554,8 @@ function askForRemoveEmployee(){
     connection.query("SELECT * FROM employee", function (err, res){
         if(err) throw err;
         const employeeTable = [];
-        const employeeList = []
         res.forEach(result => employeeTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
-        employeeTable.forEach(employee => employeeList.push(employee.name))
+        let employeeList = employeeTable.map(employee => employee.name)
 
         inquirer.prompt([
             {
@@ -512,9 +584,8 @@ function updateEmployeeName(){
     connection.query("SELECT * FROM employee", function (err, res){
         if(err) throw err;
         const employeeTable = [];
-        const employeeList = []
         res.forEach(result => employeeTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
-        employeeTable.forEach(employee => employeeList.push(employee.name))
+        let employeeList = employeeTable.map(employee => employee.name)
 
         inquirer.prompt([
             {
@@ -559,9 +630,8 @@ function updateEmployeeRole(){
     connection.query("SELECT * FROM employee", function (err, res){
         if(err) throw err;
         const employeeTable = [];
-        const employeeList = []
         res.forEach(result => employeeTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
-        employeeTable.forEach(employee => employeeList.push(employee.name))
+        let employeeList = employeeTable.map(employee => employee.name)
 
         connection.query("SELECT * FROM role", function (err, res){
             if(err) throw err;
@@ -581,7 +651,6 @@ function updateEmployeeRole(){
                 }
             ]).then(response => {
                 const { updatedEmployee, updatedRole } = response;
-
                 res.forEach(result => {if(updatedRole == result.title){roleID = result.id}})
 
                 for (let i = 0; i < employeeTable.length; i++){
@@ -690,12 +759,9 @@ function provideBudgetByDep(){
                     console.log(`\nThe ${department} department has a Utilized Budget of: $${combinedSalary}\n`)
                     clearArrays()
                     displayMainMenu()
-
                 });
- 
             });
-
-        })
+        });
     });
 };
 

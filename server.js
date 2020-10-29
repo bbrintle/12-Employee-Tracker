@@ -2,6 +2,7 @@ var mysql = require('mysql');
 var inquirer = require("inquirer");
 let currentDepartments = [];
 let currentRole = [];
+let currentManagers = [];
 var connection = mysql.createConnection({
     host: "localhost",
     port: 3306,
@@ -9,6 +10,12 @@ var connection = mysql.createConnection({
     password: "password", // <- Your password here
     database: "employee_db",
 });
+
+function clearArrays(){
+    currentDepartments = [];
+    currentRole = [];
+    currentManagers = [];
+}
 
 function convertFirstLetterCap(word){
     const answer1 = word[0].toUpperCase();
@@ -37,6 +44,7 @@ function askForAddDepartment(){
                 if(result === answer){
                     foundDepartment = true;
                     console.log("\nSorry this department already exists.\n");
+                    clearArrays()
                     return displayMainMenu();
                 }
             });
@@ -47,6 +55,7 @@ function askForAddDepartment(){
                 }, function (err, res){
                     if(err) throw err;
                     console.log(`\nAdded ${answer}\n`);
+                    clearArrays()
                     displayMainMenu();
                 });
             }
@@ -73,6 +82,7 @@ function askForRemoveDepartments(){
                 if (err) throw err;
                 console.log(`\nRemoved ${name}\n`);
                 currentDepartments = [];
+                clearArrays()
                 displayMainMenu();
             });
         });
@@ -106,6 +116,7 @@ function askForUpdateDeparment(){
                         { name: pickedDeparment }
                     ], function(err, res){
                         console.log(`\nUpdated ${pickedDeparment} to department: ${updatedDepartment}\n`);
+                        clearArrays()
                         displayMainMenu();
                     });
                 };
@@ -153,6 +164,7 @@ function askForAddRole(){
             }, function (err, res){
                 if(err) throw err;
                 console.log(`\nAdded ${role}\n`);
+                clearArrays()
                 displayMainMenu();
             });
         });
@@ -177,6 +189,7 @@ function askForRemoveRole(){
                 if (err) throw err;
                 console.log(`\nRemoved ${role}\n`);
                 currentRole = [];
+                clearArrays()
                 displayMainMenu();
             });
         });
@@ -210,6 +223,7 @@ function askForUpdateRoleName(){
                         { title: pickedRole }
                     ], function(err, res){
                         console.log(`\nUpdated ${pickedRole} to ${updatedRole}\n`);
+                        clearArrays()
                         displayMainMenu();
                     });
                 };
@@ -244,6 +258,7 @@ function askForUpdateRoleSalary(){
                         { title: pickedRole }
                     ], function(err, res){
                         console.log(`\nUpdated ${pickedRole} to ${updatedSalary}\n`);
+                        clearArrays()
                         displayMainMenu();
                     });
                 };
@@ -285,6 +300,7 @@ function askForUpdateRoleDepartment(){
                             { title: pickedRole }
                         ], function(err, res){
                             console.log(`\nUpdated ${pickedRole} to deparment: ${updatedDepartment}\n`);
+                            clearArrays()
                             displayMainMenu();
                         });
                     };
@@ -296,6 +312,7 @@ function askForUpdateRoleDepartment(){
 
 function viewAllEmployees(){
     const employeeTable = [];
+    const managerTable = [];
     connection.query("SELECT * FROM department", function(err, res){
         if(err) throw err
         res.forEach(department => currentDepartments.push(department));
@@ -303,25 +320,36 @@ function viewAllEmployees(){
         connection.query("SELECT * FROM employee", function (err, res){
             if(err) throw err
             res.forEach(employee => employeeTable.push(employee))
-            connection.query("SELECT * FROM role", function(err, res){
+            connection.query("SELECT * FROM managers", function(err, res){
                 if(err) throw err
-                for(let j = 0; j < employeeTable.length; j++){
-                    for(let i = 0; i < res.length; i++){
-                        if(res[i].id === employeeTable[j].role_id){
-                            employeeTable[j].role_id = res[i].title;
-                            for(let h = 0; h < currentDepartments.length; h++){
-                                if(currentDepartments[h].id === res[i].department_id){
-                                    employeeTable[j].department_id = currentDepartments[h].name
+                res.forEach(manager => managerTable.push(manager));
+                connection.query("SELECT * FROM role", function(err, res){
+                    if(err) throw err;
+                    for(let j = 0; j < employeeTable.length; j++){
+                        for(let i = 0; i < res.length; i++){
+                            if(res[i].id === employeeTable[j].role_id){
+                                employeeTable[j].role_id = res[i].title;
+                                for(let h = 0; h < currentDepartments.length; h++){
+                                    if(currentDepartments[h].id === res[i].department_id){
+                                        employeeTable[j].department_id = currentDepartments[h].name
+                                    }
                                 }
+
+                                for(let k = 0; k < managerTable.length; k++){
+                                    if(managerTable[k].id === employeeTable[j].manager_id){
+                                        employeeTable[j].manager_id = managerTable[k].first_name + " " + managerTable[k].last_name;
+                                    }
+                                }
+                                employeeTable[j].salary = res[i].salary;
                             }
-                            employeeTable[j].salary = res[i].salary;
                         }
                     }
-                }
-                console.log("\n");
-                console.table(employeeTable);
-                console.log("\n");
-                displayMainMenu();
+                    console.log("\n");
+                    console.table(employeeTable);
+                    console.log("\n");
+                    clearArrays()
+                    displayMainMenu();
+                });
             })
         });
     });
@@ -370,6 +398,7 @@ function viewAllEmployeesByDep(){
                     console.log("\n");
                     console.table(newEmployeeTable);
                     console.log("\n");
+                    clearArrays()
                     displayMainMenu();
                 })
             })
@@ -378,12 +407,18 @@ function viewAllEmployeesByDep(){
 }
 
 function askForAddEmployee(){
-
     connection.query("SELECT * FROM role", function (err, res){
         if(err) throw err;
         res.forEach(result => currentRole.push(result))
         let roleList = currentRole.map(role => role.title)
-        //connection.query("SELECT * FROM manager", function (err, res){
+        connection.query("SELECT * FROM managers", function (err, res){
+            if(err) throw err;
+            res.forEach(result => currentManagers.push(result))
+            const managerTable = [];
+            const managerList = [];
+            res.forEach(result => managerTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
+            managerTable.forEach(employee => managerList.push(employee.name))
+
             inquirer.prompt([
                 {
                     type: "input",
@@ -400,21 +435,29 @@ function askForAddEmployee(){
                     message: "Which role will this user be assigned to?",
                     choices: [...roleList],
                     name: "assignedRole"
+                },
+                {
+                    type: "list",
+                    message: "Who is this employee's manager?",
+                    choices: [...managerList],
+                    name: "assginedManager"
                 }
-                // ,{
-                //     type: "list",
-                //     message: "Which role will this user be assigned to?",
-                //     choices: [...currentRole],
-                //     name: "assginedManager"
-                // }
             ]).then(response => {
                 const firstName = convertFirstLetterCap(response.firstName);
                 const lastName = convertFirstLetterCap(response.lastName);
-                const { assignedRole } = response;
+                const { assignedRole, assginedManager } = response;
                 let roleID = null;
                 currentRole.forEach(result => {
                     if(assignedRole === result.title){
                         return roleID = result.id;
+                    };
+                });
+
+                let managerID = null;
+                currentManagers.forEach(result => {
+                    let name = result.first_name + " " + result.last_name;
+                    if(assginedManager === name){
+                        return managerID = result.id;
                     };
                 });
                 
@@ -422,15 +465,239 @@ function askForAddEmployee(){
                     first_name: firstName,
                     last_name: lastName,
                     role_id: roleID,
-                    manager_id: null
+                    manager_id: managerID
                 }], function(err, res){
                     if(err) throw err
                     console.log(`\nAdd ${firstName} ${lastName} to the employee list.\n`);
+                    clearArrays()
                     displayMainMenu();
                 });
             });
-});
+        });
+    });
 }
+
+function askForRemoveEmployee(){
+    connection.query("SELECT * FROM employee", function (err, res){
+        if(err) throw err;
+        const employeeTable = [];
+        const employeeList = []
+        res.forEach(result => employeeTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
+        employeeTable.forEach(employee => employeeList.push(employee.name))
+
+        inquirer.prompt([
+            {
+                type:"list",
+                message:"Who would you like to remove?",
+                choices: [...employeeList],
+                name: "removedEmployee"
+            }
+        ]).then(response => {
+            const { removedEmployee } = response;
+            for (let i = 0; i < employeeTable.length; i++){
+                if(removedEmployee === employeeTable[i].name){
+                    connection.query("DELETE FROM employee WHERE id=?",[employeeTable[i].id], function (err, res){
+                        if(err) throw err;
+                        console.log(`\nRemoved ${employeeTable[i].name} from the employee list.\n`);
+                        clearArrays()
+                        displayMainMenu();
+                    });
+                }
+            };
+        }); 
+    });
+}
+
+function updateEmployeeName(){
+    connection.query("SELECT * FROM employee", function (err, res){
+        if(err) throw err;
+        const employeeTable = [];
+        const employeeList = []
+        res.forEach(result => employeeTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
+        employeeTable.forEach(employee => employeeList.push(employee.name))
+
+        inquirer.prompt([
+            {
+                type:"list",
+                message:"Who would you like to update?",
+                choices: [...employeeList],
+                name: "updatedEmployee"
+            },
+            {
+                type:"input",
+                message:"What is the first name?",
+                name: "firstName",
+            },
+            {
+                type:"input",
+                message:"What is the last name?",
+                name: "lastName",
+            }
+        ]).then(response => {
+            const { updatedEmployee } = response;
+            const firstName = convertFirstLetterCap(response.firstName);
+            const lastName = convertFirstLetterCap(response.lastName);
+            for (let i = 0; i < employeeTable.length; i++){
+                if(updatedEmployee === employeeTable[i].name){
+                    connection.query("UPDATE employee SET first_name=?, last_name=? WHERE id=?",[
+                        firstName,
+                        lastName,
+                        employeeTable[i].id                        
+                    ], function (err, res){
+                        if(err) throw err;
+                        console.log(`\nUpdated ${firstName} ${lastName} from the previous name of ${employeeTable[i].name}\n`);
+                        clearArrays()
+                        displayMainMenu();
+                    });
+                }
+            };
+        }); 
+    });
+}
+
+function updateEmployeeRole(){
+    connection.query("SELECT * FROM employee", function (err, res){
+        if(err) throw err;
+        const employeeTable = [];
+        const employeeList = []
+        res.forEach(result => employeeTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
+        employeeTable.forEach(employee => employeeList.push(employee.name))
+
+        connection.query("SELECT * FROM role", function (err, res){
+            if(err) throw err;
+            res.forEach(result => currentRole.push(result.title))
+            inquirer.prompt([
+                {
+                    type:"list",
+                    message:"Select the employee you would like to update.",
+                    choices: [...employeeList],
+                    name: "updatedEmployee"
+                },
+                {
+                    type:"list",
+                    message:"Select the role you would like to update to.",
+                    choices: [...currentRole],
+                    name: "updatedRole"
+                }
+            ]).then(response => {
+                const { updatedEmployee, updatedRole } = response;
+
+                res.forEach(result => {if(updatedRole == result.title){roleID = result.id}})
+
+                for (let i = 0; i < employeeTable.length; i++){
+                    if(updatedEmployee === employeeTable[i].name){
+                        connection.query("UPDATE employee SET role_id=? WHERE id=?",[
+                            roleID,
+                            employeeTable[i].id                        
+                        ], function (err, res){
+                            if(err) throw err;
+                            console.log(`\nUpdated ${employeeTable[i].name}'s role to ${updatedRole} \n`);
+                            clearArrays()
+                            displayMainMenu();
+                        });
+                    }
+                };
+            }); 
+        });
+    });
+}
+
+function updateEmployeeManager(){
+    connection.query("SELECT * FROM employee", function (err, res){
+        if(err) throw err;
+        const employeeTable = [];
+        res.forEach(result => employeeTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
+        let employeeList = employeeTable.map(employee => employee.name)
+
+        connection.query("SELECT * FROM managers", function (err, res){
+            if(err) throw err;
+            const managersTable = [];
+            res.forEach(result => managersTable.push({name:`${result.first_name} ${result.last_name}`, id: result.id}))
+            let managersList = managersTable.map(manager => manager.name)
+            inquirer.prompt([
+                {
+                    type:"list",
+                    message:"Select the employee you would like to update.",
+                    choices: [...employeeList],
+                    name: "updatedEmployee"
+                },
+                {
+                    type:"list",
+                    message:"Select the role you would like to update to.",
+                    choices: [...managersList],
+                    name: "updatedManager"
+                }
+            ]).then(response => {
+                const { updatedEmployee, updatedManager } = response;
+
+                managersTable.forEach(result => {if(updatedManager === result.name){managerID = result.id}})
+
+                for (let i = 0; i < employeeTable.length; i++){
+                    if(updatedEmployee === employeeTable[i].name){
+                        connection.query("UPDATE employee SET manager_id=? WHERE id=?",[
+                            managerID,
+                            employeeTable[i].id                        
+                        ], function (err, res){
+                            if(err) throw err;
+                            console.log(`\nUpdated ${updatedEmployee}'s manger to ${updatedManager} \n`);
+                            clearArrays()
+                            displayMainMenu();
+                        });
+                    }
+                };
+            }); 
+        });
+    });
+}
+
+function provideBudgetByDep(){
+    connection.query("SELECT * FROM department", function (err, res){
+        if(err) throw err;
+        res.forEach(result => currentDepartments.push(result.name))
+        inquirer.prompt([
+            {
+                type: "list",
+                message: "Select a Department",
+                choices: [...currentDepartments],
+                name: "department"
+            }
+        ]).then(response => {
+            const { department } = response;
+            let depID = null;
+            for(let i = 0; i < res.length; i++){
+                if(department === res[i].name){
+                    depID = res[i].id;
+                }
+            }
+            console.log(depID)
+            connection.query("SELECT * FROM role WHERE department_id=?", [ depID ], function (err, res){
+                if(err) throw err
+                clearArrays()
+                res.forEach(result => currentRole.push(result))
+                connection.query("SELECT * FROM employee", function (err, res){
+                    if(err) throw err
+                    let roleIDArray = [];
+                    res.forEach(employee => roleIDArray.push(employee.role_id));
+
+                    let combinedSalary = 0;
+                    for(let i = 0; i < roleIDArray.length; i++){
+                        currentRole.forEach(department => {
+                            if(department.id === roleIDArray[i]){
+                                combinedSalary = combinedSalary + parseInt(department.salary);
+                            }
+                        })
+                    }
+                    console.log(`\nThe ${department} department has a Utilized Budget of: $${combinedSalary}\n`)
+                    clearArrays()
+                    displayMainMenu()
+
+                });
+ 
+            });
+
+        })
+    });
+};
 
 function displayMainMenu(){
     const promptChoices = ["View all Employees",
@@ -471,13 +738,13 @@ function displayMainMenu(){
             case "Add Employee":
                 return askForAddEmployee();
             case "Remove Employee":
-                return
+                return askForRemoveEmployee();
             case "Update Employee":
-                return
+                return updateEmployeeName();
             case "Update Employee's Role":
-                return
+                return updateEmployeeRole();
             case "Update Employee's Manager":
-                return
+                return updateEmployeeManager();
             case "Add Role":
                 return askForAddRole();
             case "Remove Role":
@@ -495,7 +762,7 @@ function displayMainMenu(){
             case "Update Department":
                 return askForUpdateDeparment();
             case "View Utilized Budget by Department":
-                return
+                return provideBudgetByDep();
             case "Quit":
                 connection.end();
         }

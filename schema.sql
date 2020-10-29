@@ -23,3 +23,11 @@ create table department(
     name varchar(30),
     primary key (id)
 );
+
+create table managers(
+	id integer(30) auto_increment,
+    first_name varchar(100) not null,
+    last_name varchar(100) not null,
+    department_id integer(10),
+    primary key (id)
+);
